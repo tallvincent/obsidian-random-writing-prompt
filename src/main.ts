@@ -175,7 +175,16 @@ export default class RandomWritingPrompt extends Plugin {
 			return [];
 		}
 		const lines: string[] = content.split(/\r?\n/);
-		return lines.filter((l) => !!l).map((l) => {
+		const headingIndex = lines.findIndex((l) => l.trim() === '# Prompts');
+		if (headingIndex === -1) return [];
+
+		const promptLines: string[] = [];
+		for (const line of lines.slice(headingIndex + 1)) {
+			if (line.startsWith('#')) break;
+			if (line.length > 0) promptLines.push(line);
+		}
+
+		return promptLines.map((l) => {
 			return {
 				title: l.replaceAll('[', '').replaceAll(']', ''),
 				started: this.isBacklinkLine(l)
@@ -236,7 +245,7 @@ class AllPromptsModal extends SuggestModal<Prompt> {
 		el.createEl('small', { text: prompt.started ? 'Started' : '' });
 	}
 
-		// Perform action on the selected suggestion.
+	// Perform action on the selected suggestion.
 	onChooseSuggestion(prompt: Prompt, _evt: MouseEvent | KeyboardEvent) {
 		const filePath = this.promptsFolder
 			? `${this.promptsFolder}/${prompt.title}.md`
