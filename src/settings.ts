@@ -6,11 +6,13 @@ import { FolderInputSuggest } from './gui/folder-input-suggest';
 export interface Settings {
 	mainPromptsFile: string;
 	promptsFolder: string;
+	templateFile: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
 	mainPromptsFile: 'Random Writing Prompts.md',
 	promptsFolder: '',
+	templateFile: '',
 };
 
 export class SettingTab extends PluginSettingTab {
@@ -40,7 +42,16 @@ export class SettingTab extends PluginSettingTab {
 					key: 'promptsFolder',
 					includeRoot: true
 				}
-			}
+			},
+			{
+				name: 'Template file',
+				description: 'A file whose content will be used as the template for new prompts',
+				control: {
+					type: 'file',
+					key: 'templateFile',
+					filter: (file: TFile) => file.extension === 'md',
+				},
+			},
 		];
 	}
 
@@ -90,6 +101,29 @@ export class SettingTab extends PluginSettingTab {
 						this.plugin.settings.promptsFolder = folder.path;
 						void this.plugin.saveSettings();
 					},
+				);
+			});
+
+		new Setting(containerEl)
+			.setName('Template file')
+			.setDesc('A file whose content will be used as the template for new prompts')
+			.addText((text) => {
+				text
+					.setPlaceholder('No template')
+					.setValue(this.plugin.settings.templateFile)
+					.onChange(async (value) => {
+						this.plugin.settings.templateFile = value;
+						await this.plugin.saveSettings();
+					});
+
+				new FileInputSuggest(
+					this.app,
+					text.inputEl,
+					(file: TFile) => {
+						this.plugin.settings.templateFile = file.path;
+						void this.plugin.saveSettings();
+					},
+					(file: TFile) => file.extension === 'md',
 				);
 			});
 	}

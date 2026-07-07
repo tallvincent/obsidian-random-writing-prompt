@@ -46,7 +46,7 @@ export default class RandomWritingPrompt extends Plugin {
 
 				// Create a new file with that prompt as name
 				// TODO: add in some metadata - could also allow user to specify template
-				const newFile: TFile = await this.app.vault.create(this.getPromptFilePath(prompt.title), '');
+				const newFile: TFile = await this.app.vault.create(this.getPromptFilePath(prompt.title), await this.getTemplateContent());
 
 				// Create backlink in prompt file
 				await this.app.vault.process(file, (data) => {
@@ -81,7 +81,8 @@ export default class RandomWritingPrompt extends Plugin {
 					return new Notice(`Cannot find main prompts file ${fileName}`);
 				}
 				const prompts: Prompt[] = await this.getPromptsFromFile(file);
-				return new AllPromptsModal(this.app, prompts, file, this.settings.promptsFolder).open();
+				const templateContent = await this.getTemplateContent();
+				return new AllPromptsModal(this.app, prompts, file, this.settings.promptsFolder, templateContent).open();
 			}
 		})
 
@@ -187,6 +188,14 @@ export default class RandomWritingPrompt extends Plugin {
 		const filename = title + '.md';
 		return folder ? `${folder}/${filename}` : filename;
 	}
+
+	async getTemplateContent(): Promise<string> {
+		const path = this.settings.templateFile;
+		if (!path) return '';
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) return '';
+		return await this.app.vault.read(file);
+	}
 }
 
 interface Prompt {
@@ -198,17 +207,20 @@ class AllPromptsModal extends SuggestModal<Prompt> {
 	prompts: Prompt[];
 	promptsFile: TFile;
 	promptsFolder: string;
+	templateContent: string;
 
 	constructor(
 		app: App,
 		prompts: Prompt[],
 		promptsFile: TFile,
 		promptsFolder: string,
+		templateContent: string,
 	) {
 		super(app);
 		this.prompts = prompts;
 		this.promptsFile = promptsFile;
 		this.promptsFolder = promptsFolder;
+		this.templateContent = templateContent;
 	}
 
 	// Returns all available suggestions.
@@ -224,14 +236,14 @@ class AllPromptsModal extends SuggestModal<Prompt> {
 		el.createEl('small', { text: prompt.started ? 'Started' : '' });
 	}
 
-	// Perform action on the selected suggestion.
+		// Perform action on the selected suggestion.
 	onChooseSuggestion(prompt: Prompt, _evt: MouseEvent | KeyboardEvent) {
 		const filePath = this.promptsFolder
 			? `${this.promptsFolder}/${prompt.title}.md`
 			: prompt.title + '.md';
 
 		if (!prompt.started) {
-			this.app.vault.create(filePath, '').then((newFile) => {
+			this.app.vault.create(filePath, this.templateContent).then((newFile) => {
 				this.app.vault.process(this.promptsFile, (data) => {
 					return data.replace(prompt.title, `[[${prompt.title}]]`);
 				}).then(() => {
