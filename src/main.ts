@@ -30,7 +30,7 @@ export default class RandomWritingPrompt extends Plugin {
 				// TODO: return an error or notice if the file can't be found
 				if (!(file instanceof TFile)) return [];
 
-				// Find all prompts (lines) without links
+				// Find all prompts
 				const possiblePrompts: Prompt[] = await this.getPromptsFromFile(file);
 
 				if (possiblePrompts.length === 0) {
@@ -111,7 +111,7 @@ export default class RandomWritingPrompt extends Plugin {
 					return new Notice(`Cannot find main prompts file ${fileName}`);
 				}
 
-				// Find all prompts (lines) without links
+				// Find all prompts
 				const possiblePrompts: Prompt[] = await this.getPromptsFromFile(file);
 
 				if (!possiblePrompts) {
@@ -151,11 +151,6 @@ export default class RandomWritingPrompt extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	isBacklinkLine(line: string) {
-		// Only matches regular links: [[target]] or [[target|alias]] (NOT embeds ![[...]])
-		return /\[\[[^\]]+\]\]/.test(line) && !/!\[\[[^\]]+\]\]/.test(line);
-	}
-
 	getRandomElement<T>(arr: T[]): T | undefined {
 		if (arr.length === 0) return undefined;
 
@@ -184,12 +179,21 @@ export default class RandomWritingPrompt extends Plugin {
 			if (line.length > 0) promptLines.push(line);
 		}
 
-		return promptLines.map((l) => {
-			return {
-				title: l.replaceAll('[', '').replaceAll(']', ''),
-				started: this.isBacklinkLine(l)
+		const prompts: Prompt[] = [];
+
+		for (const l of promptLines) {
+			const title = l.replaceAll('[', '').replaceAll(']', '');
+			const promptFile = this.app.vault.getAbstractFileByPath(this.getPromptFilePath(title));
+			let started = false;
+			if (promptFile instanceof TFile) {
+				const fileContent = await this.app.vault.read(promptFile);
+				const body = fileContent.replace(/^---[\s\S]*?---\n?/, '').trim();
+				started = body.length > 0;
 			}
-		})
+			prompts.push({ title, started });
+		}
+
+		return prompts;
 	}
 
 	getPromptFilePath(title: string): string {
