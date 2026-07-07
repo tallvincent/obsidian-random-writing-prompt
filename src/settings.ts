@@ -1,13 +1,16 @@
-import { App, PluginSettingTab, Setting, TFile } from 'obsidian';
+import { App, PluginSettingTab, Setting, TFile, TFolder } from 'obsidian';
 import RandomWritingPrompt from './main';
 import { FileInputSuggest } from './gui/file-input-suggest';
+import { FolderInputSuggest } from './gui/folder-input-suggest';
 
 export interface Settings {
 	mainPromptsFile: string;
+	promptsFolder: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
 	mainPromptsFile: 'Random Writing Prompts.md',
+	promptsFolder: '',
 };
 
 export class SettingTab extends PluginSettingTab {
@@ -29,6 +32,15 @@ export class SettingTab extends PluginSettingTab {
 					filter: (file: TFile) => file.extension === 'md',
 				},
 			},
+			{
+				name: 'Prompts folder',
+				description: 'Where to store the prompt files',
+				control: {
+					type: 'folder',
+					key: 'promptsFolder',
+					includeRoot: true
+				}
+			}
 		];
 	}
 
@@ -42,7 +54,6 @@ export class SettingTab extends PluginSettingTab {
 			.setDesc('The file that will store all your prompts')
 			.addText((text) => {
 				text
-					.setPlaceholder('Random Writing Prompts.md')
 					.setValue(this.plugin.settings.mainPromptsFile)
 					.onChange(async (value) => {
 						this.plugin.settings.mainPromptsFile = value;
@@ -57,6 +68,28 @@ export class SettingTab extends PluginSettingTab {
 						void this.plugin.saveSettings();
 					},
 					(file: TFile) => file.extension === 'md',
+				);
+			});
+
+		new Setting(containerEl)
+			.setName('Prompts folder')
+			.setDesc('Where to store the prompt files')
+			.addText((text) => {
+				text
+					.setPlaceholder('Root folder')
+					.setValue(this.plugin.settings.promptsFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.promptsFolder = value;
+						await this.plugin.saveSettings();
+					});
+
+				new FolderInputSuggest(
+					this.app,
+					text.inputEl,
+					(folder: TFolder) => {
+						this.plugin.settings.promptsFolder = folder.path;
+						void this.plugin.saveSettings();
+					},
 				);
 			});
 	}

@@ -22,7 +22,7 @@ export default class RandomWritingPrompt extends Plugin {
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'open-random-prompt',
-			name: 'Open random prompt',
+			name: 'Open random new prompt',
 			callback: async () => {
 				// Find the prompts file
 				const fileName: string = this.settings.mainPromptsFile;
@@ -46,7 +46,7 @@ export default class RandomWritingPrompt extends Plugin {
 
 				// Create a new file with that prompt as name
 				// TODO: add in some metadata - could also allow user to specify template
-				const newFile: TFile = await this.app.vault.create(prompt.title + '.md', '');
+				const newFile: TFile = await this.app.vault.create(this.getPromptFilePath(prompt.title), '');
 
 				// Create backlink in prompt file
 				await this.app.vault.process(file, (data) => {
@@ -81,7 +81,7 @@ export default class RandomWritingPrompt extends Plugin {
 					return new Notice(`Cannot find main prompts file ${fileName}`);
 				}
 				const prompts: Prompt[] = await this.getPromptsFromFile(file);
-				return new AllPromptsModal(this.app, prompts, file).open();
+				return new AllPromptsModal(this.app, prompts, file, this.settings.promptsFolder).open();
 			}
 		})
 
@@ -124,7 +124,7 @@ export default class RandomWritingPrompt extends Plugin {
 					return new Notice('Your prompts file is currently empty');
 				}
 
-				const promptFile = this.app.vault.getAbstractFileByPath(prompt.title + '.md');
+				const promptFile = this.app.vault.getAbstractFileByPath(this.getPromptFilePath(prompt.title));
 				if (!(promptFile instanceof TFile)) return [];
 
 				// Open newly created prompt
@@ -181,6 +181,12 @@ export default class RandomWritingPrompt extends Plugin {
 			}
 		})
 	}
+
+	getPromptFilePath(title: string): string {
+		const folder = this.settings.promptsFolder;
+		const filename = title + '.md';
+		return folder ? `${folder}/${filename}` : filename;
+	}
 }
 
 interface Prompt {
@@ -191,15 +197,18 @@ interface Prompt {
 class AllPromptsModal extends SuggestModal<Prompt> {
 	prompts: Prompt[];
 	promptsFile: TFile;
+	promptsFolder: string;
 
 	constructor(
 		app: App,
 		prompts: Prompt[],
 		promptsFile: TFile,
+		promptsFolder: string,
 	) {
 		super(app);
 		this.prompts = prompts;
 		this.promptsFile = promptsFile;
+		this.promptsFolder = promptsFolder;
 	}
 
 	// Returns all available suggestions.
@@ -217,8 +226,12 @@ class AllPromptsModal extends SuggestModal<Prompt> {
 
 	// Perform action on the selected suggestion.
 	onChooseSuggestion(prompt: Prompt, _evt: MouseEvent | KeyboardEvent) {
+		const filePath = this.promptsFolder
+			? `${this.promptsFolder}/${prompt.title}.md`
+			: prompt.title + '.md';
+
 		if (!prompt.started) {
-			this.app.vault.create(prompt.title + '.md', '').then((newFile) => {
+			this.app.vault.create(filePath, '').then((newFile) => {
 				this.app.vault.process(this.promptsFile, (data) => {
 					return data.replace(prompt.title, `[[${prompt.title}]]`);
 				}).then(() => {
@@ -226,7 +239,7 @@ class AllPromptsModal extends SuggestModal<Prompt> {
 				});
 			});
 		} else {
-			const file = this.app.vault.getAbstractFileByPath(prompt.title + '.md');
+			const file = this.app.vault.getAbstractFileByPath(filePath);
 			if (file instanceof TFile) {
 				this.app.workspace.getLeaf('tab').openFile(file);
 			}
