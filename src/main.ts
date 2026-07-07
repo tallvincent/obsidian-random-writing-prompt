@@ -19,22 +19,15 @@ export default class RandomWritingPrompt extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// This creates an icon in the left ribbon.
-		// TODO: not sure this will be needed but maybe to show all the prompts that have been filled / not filled
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
-		});
-
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'open-random-prompt',
 			name: 'Open random prompt',
 			callback: async () => {
 				// Find the prompts file
-				// TODO: can get this from settings
-				const fileName: string = 'Random Writing Prompts.md';
+				const fileName: string = this.settings.mainPromptsFile;
 				const file = this.app.vault.getAbstractFileByPath(fileName);
+				// TODO: return an error or notice if the file can't be found
 				if (!(file instanceof TFile)) return [];
 
 				// Find all prompts (lines) without links
@@ -69,13 +62,12 @@ export default class RandomWritingPrompt extends Plugin {
 			id: 'open-main-prompts-file',
 			name: 'Open main prompts file',
 			callback: async () => {
-				const fileName: string = 'Random Writing Prompts.md';
-				const file = await this.getMainPromptsFile(fileName);
-				if (file) {
-					return await this.app.workspace.getLeaf('tab').openFile(file);
-				} else {
-					new Notice('You do not have a main prompts file');
+				const fileName: string = this.settings.mainPromptsFile;
+				const file = await this.getFileByName(fileName);
+				if (!file) {
+					return new Notice('You do not have a main prompts file');
 				}
+				return await this.app.workspace.getLeaf('tab').openFile(file);
 			}
 		})
 
@@ -83,8 +75,11 @@ export default class RandomWritingPrompt extends Plugin {
 			id: 'show-all-prompts',
 			name: 'Show all prompts',
 			callback: async () => {
-				const file = await this.getMainPromptsFile('Random Writing Prompts.md');
-				if (!(file instanceof TFile)) return [];
+				const fileName = this.settings.mainPromptsFile;
+				const file = await this.getFileByName(fileName);
+				if (!file) {
+					return new Notice(`Cannot find main prompts file ${fileName}`);
+				}
 				const prompts: Prompt[] = await this.getPromptsFromFile(file);
 				return new AllPromptsModal(this.app, prompts, file).open();
 			}
@@ -94,8 +89,11 @@ export default class RandomWritingPrompt extends Plugin {
 			id: 'add-prompt',
 			name: 'Add new prompt to file',
 			callback: async () => {
-				const file = await this.getMainPromptsFile('Random Writing Prompts.md');
-				if (!(file instanceof TFile)) return [];
+				const fileName = this.settings.mainPromptsFile;
+				const file = await this.getFileByName(fileName);
+				if (!file) {
+					return new Notice(`Cannot find main prompts file ${fileName}`);
+				}
 				return new AddPromptModal(this.app, file).open();
 			}
 		})
@@ -105,10 +103,12 @@ export default class RandomWritingPrompt extends Plugin {
 			name: 'Open random started prompt',
 			callback: async () => {
 				// Find the prompts file
-				// TODO: can get this from settings
-				const fileName: string = 'Random Writing Prompts.md';
-				const file = this.app.vault.getAbstractFileByPath(fileName);
-				if (!(file instanceof TFile)) return [];
+				const fileName: string = this.settings.mainPromptsFile;
+				const file = await this.getFileByName(fileName);
+
+				if (!file) {
+					return new Notice(`Cannot find main prompts file ${fileName}`);
+				}
 
 				// Find all prompts (lines) without links
 				const possiblePrompts: Prompt[] = await this.getPromptsFromFile(file);
@@ -162,7 +162,7 @@ export default class RandomWritingPrompt extends Plugin {
 		return arr[index];
 	}
 
-	async getMainPromptsFile(fileName: string) {
+	async getFileByName(fileName: string) {
 		const file = this.app.vault.getAbstractFileByPath(fileName);
 		if (!(file instanceof TFile)) return null;
 		return file;
