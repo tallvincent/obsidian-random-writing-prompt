@@ -1,92 +1,72 @@
-# Obsidian Sample Plugin
+# Obsidian Random Writing Prompt Plugin
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+A plugin for [Obsidian](https://obsidian.md) that helps spark creativity by letting you pick a random writing prompt from a list and start writing.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+- Maintain a single prompts file with a list of ideas organized under a `# Prompts` heading
+- Open a random **unstarted** prompt — a new note is created for you automatically
+- Open a random **started** prompt — jump back into one you've already begun working on
+- Browse all prompts in a fuzzy-search modal
+- Add new prompts directly from the command palette
+- Configure where prompt files are stored
+- Optionally use a template file for new prompt notes
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+## Commands
 
-## First time developing plugins?
+| Command | Description |
+|---|---|
+| **Open random new prompt** | Pick a random prompt that hasn't been started, create a note for it, and open it |
+| **Open random started prompt** | Pick a random prompt you've already begun and open its note |
+| **Show all prompts** | Open a searchable list of all prompts |
+| **Open main prompts file** | Open the prompts list file directly |
+| **Add new prompt to file** | Add a new prompt to your list |
 
-Quick starting guide for new plugin devs:
+## How it works
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+### The prompts file
 
-## Releasing new releases
+Your prompts live in a single Markdown file under a `# Prompts` heading. Each line after the heading is treated as a prompt. For example:
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
-
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
-
-## Adding your plugin to the community plugin list
-
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint
-
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+```md
+# Prompts
+How would you fight someone if you both had 4 arms?
+If you were suddenly 9 years old, what's the first thing you'd do?
+What would you do if gravity affected everything but you?
+You've woken up on the international space station alone, what do you do?
 ```
 
-If you have multiple URLs, you can also do:
+When you open a new prompt, the plugin creates a new note (named after the prompt) and turns the prompt line in your list into a wikilink `[[prompt title]]`.
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
+A prompt is considered "started" when its note contains content beyond any YAML frontmatter. If you delete a note, the prompt becomes unstarted again.
+
+### Duplicate detection
+
+The **Add new prompt to file** command checks for duplicates (case-insensitive) before allowing submission so you don't accidentally add the same prompt twice.
+
+## Settings
+
+- **Main prompt file** — the file that stores your prompts. Created automatically on first load with a `# Prompts` heading.
+- **Prompts folder** — the folder where new prompt notes are created. Leave empty for the vault root.
+- **Template file** — optionally, a template note whose content (including frontmatter) will be used when creating new prompt notes.
+
+## Installation
+
+### From the Community Plugin Browser
+
+Search for "Random Writing Prompt" in Obsidian's community plugin browser and install it.
+
+### Manual installation
+
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/tallvincent/obsidian-random-writing-prompt/releases).
+2. Copy them into `VaultFolder/.obsidian/plugins/random-writing-prompt/`.
+3. Reload Obsidian and enable the plugin in **Settings → Community plugins**.
+
+## Development
+
+```bash
+npm install
+npm run dev     # watch mode
+npm run build   # production build
+npm run lint    # run eslint
 ```
-
-## API Documentation
-
-See https://docs.obsidian.md
