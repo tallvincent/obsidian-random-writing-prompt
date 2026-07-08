@@ -22,6 +22,7 @@ export default class RandomWritingPrompt extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		await this.ensurePromptsFile();
 
 		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
@@ -225,6 +226,22 @@ export default class RandomWritingPrompt extends Plugin {
 		const file = this.app.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) return '';
 		return await this.app.vault.read(file);
+	}
+
+	async ensurePromptsFile(): Promise<void> {
+		const path = this.settings.mainPromptsFile;
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (file instanceof TFile) return;
+
+		const dir = path.split('/').slice(0, -1).join('/');
+		if (dir) {
+			const folder = this.app.vault.getAbstractFileByPath(dir);
+			if (!folder) {
+				await this.app.vault.createFolder(dir);
+			}
+		}
+
+		await this.app.vault.create(path, '# Prompts\n');
 	}
 
 	noMainPromptsFileNotice() {
