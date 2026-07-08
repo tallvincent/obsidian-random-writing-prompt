@@ -31,5 +31,6 @@ export class FileInputSuggest extends AbstractInputSuggest<TFile> {
 	selectSuggestion(file: TFile, _evt: MouseEvent | KeyboardEvent): void {
 		this.setValue(file.path);
 		this.onChooseFn(file);
+		this.close();
 	}
 }
