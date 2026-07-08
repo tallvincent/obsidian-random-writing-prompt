@@ -16,7 +16,7 @@ A plugin for [Obsidian](https://obsidian.md) that helps spark creativity by lett
 
 | Command | Description |
 |---|---|
-| **Open random new prompt** | Pick a random prompt that hasn't been started, create a note for it, and open it |
+| **Open random new prompt** | Pick a random prompt that hasn't been started, create a note for it if it doesn't already exist, and open it |
 | **Open random started prompt** | Pick a random prompt you've already begun and open its note |
 | **Show all prompts** | Open a searchable list of all prompts |
 | **Open main prompts file** | Open the prompts list file directly |
