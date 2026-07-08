@@ -95,7 +95,9 @@ export default class RandomWritingPrompt extends Plugin {
 				if (!promptsFile) {
 					return this.noMainPromptsFileNotice();
 				}
-				return new AddPromptModal(this.app, promptsFile).open();
+				const prompts = await this.getPromptsFromFile(promptsFile);
+				const existingTitles = prompts.map((p) => p.title.toLowerCase());
+				return new AddPromptModal(this.app, promptsFile, existingTitles).open();
 			}
 		})
 
@@ -292,31 +294,60 @@ class AllPromptsModal extends SuggestModal<Prompt> {
 
 class AddPromptModal extends Modal {
 	promptsFile: TFile;
+	existingTitles: string[];
 
 	constructor(
 		app: App,
-		promptsFile: TFile
+		promptsFile: TFile,
+		existingTitles: string[],
 	) {
 		super(app);
 		this.promptsFile = promptsFile;
+		this.existingTitles = existingTitles;
 
 		this.setTitle('Add a new prompt to the prompts file');
 
 		let prompt = '';
+		let isDuplicate = false;
+
+		const warningEl = this.contentEl.createDiv({
+			cls: 'setting-item-description',
+			text: '',
+		});
+		warningEl.setCssProps({
+			color: 'var(--text-error)',
+			display: 'none',
+		});
+
 		new Setting(this.contentEl)
 			.addText((text) => {
 				text.inputEl.style.width = '100%';
 				text.inputEl.addEventListener('keydown', async (e: KeyboardEvent) => {
-					if (e.key === 'Enter' && prompt.trim()) {
+					if (e.key === 'Enter') {
 						e.preventDefault();
+						const trimmed = prompt.trim();
+						if (!trimmed) return;
+						if (isDuplicate) {
+							new Notice('This prompt already exists');
+							return;
+						}
 						const content = await this.app.vault.read(this.promptsFile);
-						const newLine = (content.endsWith('\n') ? '' : '\n') + prompt.trim() + '\n';
+						const newLine = (content.endsWith('\n') ? '' : '\n') + trimmed + '\n';
 						await this.app.vault.modify(this.promptsFile, content + newLine);
 						this.close();
 					}
 				});
 				text.onChange((value) => {
 					prompt = value;
+					const trimmed = value.trim();
+					isDuplicate = trimmed.length > 0 && this.existingTitles.includes(trimmed.toLowerCase());
+					if (isDuplicate) {
+						warningEl.setText('This prompt already exists');
+						warningEl.setCssProps({ display: '' });
+					} else {
+						warningEl.setText('');
+						warningEl.setCssProps({ display: 'none' });
+					}
 				});
 			});
 	}
