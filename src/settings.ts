@@ -1,7 +1,7 @@
-import { App, PluginSettingTab, Setting, TFile, TFolder } from 'obsidian';
+import { App, normalizePath, PluginSettingTab, Setting, TFile, TFolder } from 'obsidian';
 import RandomWritingPrompt from './main';
-import { FileInputSuggest } from './gui/file-input-suggest';
-import { FolderInputSuggest } from './gui/folder-input-suggest';
+import { FileInputSuggest } from './ui/file-input-suggest';
+import { FolderInputSuggest } from './ui/folder-input-suggest';
 
 export interface Settings {
 	mainPromptsFile: string;
@@ -71,15 +71,15 @@ export class SettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 
-				new FileInputSuggest(
-					this.app,
-					text.inputEl,
-					(file: TFile) => {
-						this.plugin.settings.mainPromptsFile = file.path;
-						void this.plugin.saveSettings();
-					},
-					(file: TFile) => file.extension === 'md',
-				);
+			new FileInputSuggest(
+				this.app,
+				text.inputEl,
+				(file: TFile) => {
+					this.plugin.settings.mainPromptsFile = normalizePath(file.path);
+					void this.plugin.saveSettings();
+				},
+				(file: TFile) => file.extension === 'md',
+			);
 			});
 
 		new Setting(containerEl)
@@ -94,14 +94,14 @@ export class SettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 
-				new FolderInputSuggest(
-					this.app,
-					text.inputEl,
-					(folder: TFolder) => {
-						this.plugin.settings.promptsFolder = folder.path;
-						void this.plugin.saveSettings();
-					},
-				);
+			new FolderInputSuggest(
+				this.app,
+				text.inputEl,
+				(folder: TFolder) => {
+					this.plugin.settings.promptsFolder = normalizePath(folder.path);
+					void this.plugin.saveSettings();
+				},
+			);
 			});
 
 		new Setting(containerEl)
@@ -116,15 +116,15 @@ export class SettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 
-				new FileInputSuggest(
-					this.app,
-					text.inputEl,
-					(file: TFile) => {
-						this.plugin.settings.templateFile = file.path;
-						void this.plugin.saveSettings();
-					},
-					(file: TFile) => file.extension === 'md',
-				);
+			new FileInputSuggest(
+				this.app,
+				text.inputEl,
+				(file: TFile) => {
+					this.plugin.settings.templateFile = normalizePath(file.path);
+					void this.plugin.saveSettings();
+				},
+				(file: TFile) => file.extension === 'md',
+			);
 			});
 	}
 }

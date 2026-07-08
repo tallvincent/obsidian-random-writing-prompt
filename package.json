@@ -1,7 +1,7 @@
 {
 	"name": "random-writing-prompt",
 	"version": "1.0.0",
-	"description": "This is a plugin for Obsidian (https://obsidian.md)",
+	"description": "Open random writing prompts to spark some creativity",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

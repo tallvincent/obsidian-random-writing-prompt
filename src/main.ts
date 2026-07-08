@@ -1,10 +1,7 @@
 import {
-	App,
-	Modal,
+	normalizePath,
 	Notice,
 	Plugin,
-	Setting,
-	SuggestModal,
 	TFile,
 } from 'obsidian';
 import {
@@ -12,10 +9,10 @@ import {
 	Settings,
 	SettingTab,
 } from './settings';
-
-function escapeRegex(str: string): string {
-	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+import { Prompt } from './types';
+import { wrapAsWikilink } from './utils/helpers';
+import { AllPromptsModal } from './ui/all-prompts-modal';
+import { AddPromptModal } from './ui/add-prompt-modal';
 
 export default class RandomWritingPrompt extends Plugin {
 	settings!: Settings;
@@ -24,25 +21,21 @@ export default class RandomWritingPrompt extends Plugin {
 		await this.loadSettings();
 		await this.ensurePromptsFile();
 
-		// This adds a simple command that can be triggered anywhere
 		this.addCommand({
 			id: 'open-random-prompt',
 			name: 'Open random new prompt',
 			callback: async () => {
-				// Find the prompts file
 				const promptsFileName: string = this.settings.mainPromptsFile;
 				const promptsFile = await this.getFileByName(promptsFileName);
 				if (!promptsFile) {
 					return this.noMainPromptsFileNotice();
 				}
 
-				// Find all prompts
 				const possiblePrompts: Prompt[] = await this.getPromptsFromFile(promptsFile);
 				if (possiblePrompts.length === 0) {
 					return this.noPromptsNotice();
 				}
 
-				// Select random prompt
 				const prompt: Prompt | undefined = this.getRandomElement(possiblePrompts.filter((p) => !p.started));
 
 				if (!prompt) {
@@ -54,17 +47,12 @@ export default class RandomWritingPrompt extends Plugin {
 					return await this.app.workspace.getLeaf('tab').openFile(maybeFile);
 				}
 
-				// Create a new file with that prompt as name
 				const newFile: TFile = await this.app.vault.create(this.getPromptFilePath(prompt.title), await this.getTemplateContent());
 
-				// Create backlink in prompt file
 				await this.app.vault.process(promptsFile, (data) => {
-					const escaped = escapeRegex(prompt.title);
-					const regex = new RegExp(`(?<!\\[\\[)${escaped}(?!\\]\\])`, 'g');
-					return data.replace(regex, `[[${prompt.title}]]`);
+					return wrapAsWikilink(data, prompt.title);
 				})
 
-				// Open newly created prompt
 				return await this.app.workspace.getLeaf('tab').openFile(newFile);
 			},
 		});
@@ -116,20 +104,17 @@ export default class RandomWritingPrompt extends Plugin {
 			id: 'open-random-started-prompt',
 			name: 'Open random started prompt',
 			callback: async () => {
-				// Find the prompts file
 				const promptsFileName = this.settings.mainPromptsFile;
 				const promptsFile = await this.getFileByName(promptsFileName);
 				if (!promptsFile) {
 					return this.noMainPromptsFileNotice();
 				}
 
-				// Find all prompts
 				const possiblePrompts: Prompt[] = await this.getPromptsFromFile(promptsFile);
 				if (!possiblePrompts) {
 					return this.noPromptsNotice();
 				}
 
-				// Select random prompt
 				const prompt: Prompt | undefined = this.getRandomElement(possiblePrompts.filter((p) => p.started));
 
 				if (!prompt) {
@@ -141,12 +126,10 @@ export default class RandomWritingPrompt extends Plugin {
 					return new Notice(`Could not open file ${prompt.title}`);
 				}
 
-				// Open newly created prompt
 				return await this.app.workspace.getLeaf('tab').openFile(promptFile);
 			}
 		})
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SettingTab(this.app, this));
 	}
 
@@ -172,7 +155,7 @@ export default class RandomWritingPrompt extends Plugin {
 	}
 
 	async getFileByName(fileName: string) {
-		const file = this.app.vault.getAbstractFileByPath(fileName);
+		const file = this.app.vault.getAbstractFileByPath(normalizePath(fileName));
 		if (file instanceof TFile) return file;
 		const basename = fileName.split('/').pop();
 		if (!basename) return null;
@@ -216,11 +199,11 @@ export default class RandomWritingPrompt extends Plugin {
 	getPromptFilePath(title: string): string {
 		const folder = this.settings.promptsFolder;
 		const filename = title + '.md';
-		return folder ? `${folder}/${filename}` : filename;
+		return folder ? normalizePath(`${folder}/${filename}`) : filename;
 	}
 
 	async getTemplateContent(): Promise<string> {
-		const path = this.settings.templateFile;
+		const path = normalizePath(this.settings.templateFile);
 		if (!path) return '';
 		const file = this.app.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) return '';
@@ -228,7 +211,7 @@ export default class RandomWritingPrompt extends Plugin {
 	}
 
 	async ensurePromptsFile(): Promise<void> {
-		const path = this.settings.mainPromptsFile;
+		const path = normalizePath(this.settings.mainPromptsFile);
 		const file = this.app.vault.getAbstractFileByPath(path);
 		if (file instanceof TFile) return;
 
@@ -260,126 +243,3 @@ export default class RandomWritingPrompt extends Plugin {
 	}
 }
 
-interface Prompt {
-	title: string,
-	started: boolean
-}
-
-class AllPromptsModal extends SuggestModal<Prompt> {
-	prompts: Prompt[];
-	promptsFile: TFile;
-	promptsFolder: string;
-	templateContent: string;
-
-	constructor(
-		app: App,
-		prompts: Prompt[],
-		promptsFile: TFile,
-		promptsFolder: string,
-		templateContent: string,
-	) {
-		super(app);
-		this.prompts = prompts;
-		this.promptsFile = promptsFile;
-		this.promptsFolder = promptsFolder;
-		this.templateContent = templateContent;
-	}
-
-	// Returns all available suggestions.
-	getSuggestions(query: string): Prompt[] {
-		return this.prompts.filter((prompt) =>
-			prompt.title.toLowerCase().includes(query.toLowerCase())
-		);
-	}
-
-	// Renders each suggestion item.
-	renderSuggestion(prompt: Prompt, el: HTMLElement) {
-		el.createDiv({ text: prompt.title });
-		el.createEl('small', { text: prompt.started ? 'Started' : '' });
-	}
-
-	// Perform action on the selected suggestion.
-	onChooseSuggestion(prompt: Prompt, _evt: MouseEvent | KeyboardEvent) {
-		const filePath = this.promptsFolder
-			? `${this.promptsFolder}/${prompt.title}.md`
-			: prompt.title + '.md';
-
-		if (!prompt.started) {
-			this.app.vault.create(filePath, this.templateContent).then((newFile) => {
-				this.app.vault.process(this.promptsFile, (data) => {
-					const escaped = escapeRegex(prompt.title);
-					const regex = new RegExp(`(?<!\\[\\[)${escaped}(?!\\]\\])`, 'g');
-					return data.replace(regex, `[[${prompt.title}]]`);
-				}).then(() => {
-					this.app.workspace.getLeaf('tab').openFile(newFile);
-				});
-			});
-		} else {
-			const file = this.app.vault.getAbstractFileByPath(filePath);
-			if (file instanceof TFile) {
-				this.app.workspace.getLeaf('tab').openFile(file);
-			}
-		}
-	}
-}
-
-class AddPromptModal extends Modal {
-	promptsFile: TFile;
-	existingTitles: string[];
-
-	constructor(
-		app: App,
-		promptsFile: TFile,
-		existingTitles: string[],
-	) {
-		super(app);
-		this.promptsFile = promptsFile;
-		this.existingTitles = existingTitles;
-
-		this.setTitle('Add a new prompt to the prompts file');
-
-		let prompt = '';
-		let isDuplicate = false;
-
-		const warningEl = this.contentEl.createDiv({
-			cls: 'setting-item-description',
-			text: '',
-		});
-		warningEl.setCssProps({
-			color: 'var(--text-error)',
-			display: 'none',
-		});
-
-		new Setting(this.contentEl)
-			.addText((text) => {
-				text.inputEl.style.width = '100%';
-				text.inputEl.addEventListener('keydown', async (e: KeyboardEvent) => {
-					if (e.key === 'Enter') {
-						e.preventDefault();
-						const trimmed = prompt.trim();
-						if (!trimmed) return;
-						if (isDuplicate) {
-							new Notice('This prompt already exists');
-							return;
-						}
-						const content = await this.app.vault.read(this.promptsFile);
-						const newLine = (content.endsWith('\n') ? '' : '\n') + trimmed + '\n';
-						await this.app.vault.modify(this.promptsFile, content + newLine);
-						this.close();
-					}
-				});
-				text.onChange((value) => {
-					prompt = value;
-					const trimmed = value.trim();
-					isDuplicate = trimmed.length > 0 && this.existingTitles.includes(trimmed.toLowerCase());
-					if (isDuplicate) {
-						warningEl.setText('This prompt already exists');
-						warningEl.setCssProps({ display: '' });
-					} else {
-						warningEl.setText('');
-						warningEl.setCssProps({ display: 'none' });
-					}
-				});
-			});
-	}
-}
