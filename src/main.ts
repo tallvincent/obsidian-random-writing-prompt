@@ -199,7 +199,6 @@ export default class RandomWritingPrompt extends Plugin {
 
 		for (const l of promptLines) {
 			const title = l.replaceAll('[', '').replaceAll(']', '');
-			// TODO: if file not found and should be there, check in vault absolutely
 			const promptFile = this.app.vault.getAbstractFileByPath(this.getPromptFilePath(title));
 			let started = false;
 			if (promptFile instanceof TFile) {
