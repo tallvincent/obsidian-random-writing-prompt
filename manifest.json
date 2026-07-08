@@ -1,7 +1,7 @@
 {
 	"id": "random-writing-prompt",
 	"name": "Random Writing Prompt",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.4.10",
 	"description": "Open random writing prompts to spark some creativity.",
 	"author": "tallvincent",
