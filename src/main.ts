@@ -13,6 +13,10 @@ import {
 	SettingTab,
 } from './settings';
 
+function escapeRegex(str: string): string {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export default class RandomWritingPrompt extends Plugin {
 	settings!: Settings;
 
@@ -45,12 +49,19 @@ export default class RandomWritingPrompt extends Plugin {
 					return this.noNotStartedPromptsNotice();
 				}
 
+				const maybeFile = await this.getFileByName(this.getPromptFilePath(prompt.title));
+				if (maybeFile && maybeFile instanceof TFile) {
+					return await this.app.workspace.getLeaf('tab').openFile(maybeFile);
+				}
+
 				// Create a new file with that prompt as name
 				const newFile: TFile = await this.app.vault.create(this.getPromptFilePath(prompt.title), await this.getTemplateContent());
 
 				// Create backlink in prompt file
 				await this.app.vault.process(promptsFile, (data) => {
-					return data.replace(prompt.title, `[[${prompt.title}]]`);
+					const escaped = escapeRegex(prompt.title);
+					const regex = new RegExp(`(?<!\\[\\[)${escaped}(?!\\]\\])`, 'g');
+					return data.replace(regex, `[[${prompt.title}]]`);
 				})
 
 				// Open newly created prompt
@@ -278,7 +289,9 @@ class AllPromptsModal extends SuggestModal<Prompt> {
 		if (!prompt.started) {
 			this.app.vault.create(filePath, this.templateContent).then((newFile) => {
 				this.app.vault.process(this.promptsFile, (data) => {
-					return data.replace(prompt.title, `[[${prompt.title}]]`);
+					const escaped = escapeRegex(prompt.title);
+					const regex = new RegExp(`(?<!\\[\\[)${escaped}(?!\\]\\])`, 'g');
+					return data.replace(regex, `[[${prompt.title}]]`);
 				}).then(() => {
 					this.app.workspace.getLeaf('tab').openFile(newFile);
 				});
