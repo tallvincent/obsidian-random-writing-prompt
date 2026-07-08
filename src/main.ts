@@ -65,7 +65,7 @@ export default class RandomWritingPrompt extends Plugin {
 				const promptsFileName: string = this.settings.mainPromptsFile;
 				const promptsFile = await this.getFileByName(promptsFileName);
 				if (!promptsFile) {
-					return new Notice('You do not have a main prompts file');
+					return this.noMainPromptsFileNotice();
 				}
 				return await this.app.workspace.getLeaf('tab').openFile(promptsFile);
 			}
@@ -78,7 +78,7 @@ export default class RandomWritingPrompt extends Plugin {
 				const promptsFileName = this.settings.mainPromptsFile;
 				const promptsFile = await this.getFileByName(promptsFileName);
 				if (!promptsFile) {
-					return new Notice(`Cannot find main prompts file ${promptsFileName}`);
+					return this.noMainPromptsFileNotice();
 				}
 				const prompts: Prompt[] = await this.getPromptsFromFile(promptsFile);
 				const templateContent = await this.getTemplateContent();
@@ -93,7 +93,7 @@ export default class RandomWritingPrompt extends Plugin {
 				const promptsFileName = this.settings.mainPromptsFile;
 				const promptsFile = await this.getFileByName(promptsFileName);
 				if (!promptsFile) {
-					return new Notice(`Cannot find main prompts file ${promptsFileName}`);
+					return this.noMainPromptsFileNotice();
 				}
 				return new AddPromptModal(this.app, promptsFile).open();
 			}
@@ -104,29 +104,29 @@ export default class RandomWritingPrompt extends Plugin {
 			name: 'Open random started prompt',
 			callback: async () => {
 				// Find the prompts file
-				const promptsfileName: string = this.settings.mainPromptsFile;
-				const promptsFile = await this.getFileByName(promptsfileName);
-
+				const promptsFileName = this.settings.mainPromptsFile;
+				const promptsFile = await this.getFileByName(promptsFileName);
 				if (!promptsFile) {
-					return new Notice(`Cannot find main prompts file ${promptsfileName}`);
+					return this.noMainPromptsFileNotice();
 				}
 
 				// Find all prompts
 				const possiblePrompts: Prompt[] = await this.getPromptsFromFile(promptsFile);
-
 				if (!possiblePrompts) {
-					return new Notice('Your prompts file is currently empty');
+					return this.noPromptsNotice();
 				}
 
 				// Select random prompt
 				const prompt: Prompt | undefined = this.getRandomElement(possiblePrompts.filter((p) => p.started));
 
 				if (!prompt) {
-					return new Notice('Your prompts file is currently empty');
+					return this.noStartedPromptsNotice();
 				}
 
-				const promptFile = this.app.vault.getAbstractFileByPath(this.getPromptFilePath(prompt.title));
-				if (!(promptFile instanceof TFile)) return [];
+				const promptFile = await this.getFileByName(this.getPromptFilePath(prompt.title));
+				if (!promptFile) {
+					return new Notice(`Could not open file ${prompt.title}`);
+				}
 
 				// Open newly created prompt
 				return await this.app.workspace.getLeaf('tab').openFile(promptFile);
