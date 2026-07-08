@@ -44,7 +44,6 @@ export default class RandomWritingPrompt extends Plugin {
 				// Select random prompt
 				const prompt: Prompt | undefined = this.getRandomElement(possiblePrompts.filter((p) => !p.started));
 
-				// TODO: also what about if a file has been deleted and the link hasn't been updated
 				if (!prompt) {
 					return this.noNotStartedPromptsNotice();
 				}
@@ -173,8 +172,11 @@ export default class RandomWritingPrompt extends Plugin {
 
 	async getFileByName(fileName: string) {
 		const file = this.app.vault.getAbstractFileByPath(fileName);
-		if (!(file instanceof TFile)) return null;
-		return file;
+		if (file instanceof TFile) return file;
+		const basename = fileName.split('/').pop();
+		if (!basename) return null;
+		const match = this.app.vault.getFiles().find((f) => f.name === basename);
+		return match ?? null;
 	}
 
 	async getPromptsFromFile(file: TFile) {
