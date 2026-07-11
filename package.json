@@ -1,6 +1,6 @@
 {
 	"name": "random-writing-prompt",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "Open random writing prompts to spark some creativity.",
 	"main": "main.js",
 	"type": "module",
