@@ -215,15 +215,14 @@ export default class RandomWritingPrompt extends Plugin {
 	//		 all of the commands will just show a notice that the main prompts file was not found.
 	async ensurePromptsFile(): Promise<void> {
 		const path = normalizePath(this.settings.mainPromptsFile);
-		const existing = await this.getFileByName(this.settings.mainPromptsFile);
-		if (existing) return;
+		const existing = this.app.vault.getAbstractFileByPath(path);
+		if (existing instanceof TFile) return;
 
 		const dir = path.split('/').slice(0, -1).join('/');
 		if (dir) {
 			try {
 				await this.app.vault.createFolder(dir);
 			} catch {
-				// folder already exists or cannot be created
 				return;
 			}
 		}
@@ -231,7 +230,6 @@ export default class RandomWritingPrompt extends Plugin {
 		try {
 			await this.app.vault.create(path, '# Prompts\n');
 		} catch {
-			// file already exists
 			return;
 		}
 	}
